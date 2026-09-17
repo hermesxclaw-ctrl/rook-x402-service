@@ -71,3 +71,12 @@ app.post("/v1/convert", (req, res) => {
     res.status(422).json({ error: err instanceof Error ? err.message : "convert failed" });
   }
 });
+
+
+app.use((_req, res) => res.status(404).json({ error: "not found" }));
+
+
+app.listen(PORT, () => {
+  console.log(`[service] listening on :${PORT}`);
+  console.log(`[service] x402 config:`, JSON.stringify(describeConfig(), null, 2));
+});
