@@ -3,10 +3,16 @@ import { convert, FORMATS, type Format } from "./convert.js";
 import { readUrl } from "./read.js";
 import { describeConfig, mountX402 } from "./x402.js";
 
+
 const PORT = Number(process.env.PORT ?? 3000);
 const app = express();
+// Behind Render's reverse proxy: respect X-Forwarded-Proto so the x402
+// middleware advertises https:// resource URLs (required for Bazaar).
+app.set("trust proxy", 1);
+
 
 app.use(express.json({ limit: "2mb" }));
+
 
 // ---- Free routes (registered BEFORE the x402 gate) ----
 app.get("/v1/health", (_req, res) => {
@@ -24,8 +30,10 @@ app.get("/v1/health", (_req, res) => {
   });
 });
 
+
 // ---- x402 payment gate: everything below requires a paid USDC authorization ----
 mountX402(app);
+
 
 // ---- Paid route handlers (run only after payment verifies + settles) ----
 app.post("/v1/read", async (req, res) => {
@@ -44,6 +52,7 @@ app.post("/v1/read", async (req, res) => {
   }
 });
 
+
 app.post("/v1/convert", (req, res) => {
   try {
     const { from, to, input } = req.body ?? {};
@@ -61,11 +70,4 @@ app.post("/v1/convert", (req, res) => {
   } catch (err) {
     res.status(422).json({ error: err instanceof Error ? err.message : "convert failed" });
   }
-});
-
-app.use((_req, res) => res.status(404).json({ error: "not found" }));
-
-app.listen(PORT, () => {
-  console.log(`[service] listening on :${PORT}`);
-  console.log(`[service] x402 config:`, JSON.stringify(describeConfig(), null, 2));
 });
