@@ -4,6 +4,8 @@ import { readUrl } from "./read.js";
 import { describeConfig, mountX402 } from "./x402.js";
 
 
+
+
 const PORT = Number(process.env.PORT ?? 3000);
 const app = express();
 // Behind Render's reverse proxy: respect X-Forwarded-Proto so the x402
@@ -11,10 +13,19 @@ const app = express();
 app.set("trust proxy", 1);
 
 
+
+
 app.use(express.json({ limit: "2mb" }));
 
 
+
+
 // ---- Free routes (registered BEFORE the x402 gate) ----
+
+app.get("/.well-known/402index-verify.txt", (_req, res) => {
+  res.type("text/plain").send("dd86c82db494020690dd3f56d04b9c05c231cbeb1f633b6cfa1d436cdcd747f6");
+});
+
 app.get("/v1/health", (_req, res) => {
   res.json({
     ok: true,
@@ -31,8 +42,12 @@ app.get("/v1/health", (_req, res) => {
 });
 
 
+
+
 // ---- x402 payment gate: everything below requires a paid USDC authorization ----
 mountX402(app);
+
+
 
 
 // ---- Paid route handlers (run only after payment verifies + settles) ----
@@ -51,6 +66,8 @@ app.post("/v1/read", async (req, res) => {
     res.status(422).json({ error: err instanceof Error ? err.message : "read failed" });
   }
 });
+
+
 
 
 app.post("/v1/convert", (req, res) => {
@@ -73,7 +90,11 @@ app.post("/v1/convert", (req, res) => {
 });
 
 
+
+
 app.use((_req, res) => res.status(404).json({ error: "not found" }));
+
+
 
 
 app.listen(PORT, () => {
